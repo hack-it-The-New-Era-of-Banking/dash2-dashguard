@@ -2,6 +2,11 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, Platform, Alert } f
 import { MessageSquare, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import * as SMS from 'expo-sms';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
+// Initialize Google Gemini
+const genAI = new GoogleGenerativeAI('AIzaSyCxz87SJOkKqWSvwCDlw52Krlzvi0z_PDo');
+const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
 
 interface Message {
   id: string;
@@ -14,6 +19,7 @@ interface Message {
 export default function MessagesScreen() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isAvailable, setIsAvailable] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     // Check if SMS is available on the device
@@ -29,24 +35,93 @@ export default function MessagesScreen() {
     checkSmsAvailability();
   }, []);
 
+  // Function to add delay between API calls
+  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+  // Function to generate mock message text using Gemini
+  const generateMockText = async (): Promise<string> => {
+    try {
+      await delay(8000); // Add 4 second delay
+      const prompt = `Generate a random SMS message that could be either a fraud or a legitimate message, make it balance. Make it Filipino way.`;
+      const result = await model.generateContent(prompt);
+      return result.response.text().trim();
+    } catch (error) {
+      console.error('Error generating mock text:', error);
+      return 'Your account has been locked. Click here to verify: bit.ly/suspicious-link';
+    }
+  };
+
+  // Function to analyze message using Gemini
+  const analyzeMessage = async (text: string): Promise<'high' | 'suspicious' | 'safe'> => {
+    try {
+      await delay(8000); // Add 4 second delay
+      const prompt = `Sentiment Analysis for detecting if text message is subjective to scamming, phishing or fraud. Rate it as either 'high', 'suspicious', or 'safe' risk:
+      "${text}"
+      Only respond with one word: high, suspicious, or safe.`;
+
+      const result = await model.generateContent(prompt);
+      const response = result.response.text().toLowerCase().trim();
+
+      if (response === 'high' || response === 'suspicious' || response === 'safe') {
+        return response as 'high' | 'suspicious' | 'safe';
+      }
+      return 'suspicious'; // Default to suspicious if response is unclear
+    } catch (error) {
+      console.error('Error analyzing message:', error);
+      return 'suspicious';
+    }
+  };
+
+  // Function to show risk alert
+  const showRiskAlert = (risk: 'high' | 'suspicious' | 'safe', message: string) => {
+    let title = '';
+    let description = '';
+
+    switch(risk) {
+      case 'high':
+        title = '⚠️ High Risk Message Detected';
+        description = 'This message appears to be dangerous and likely a scam. Do not click any links or provide personal information.';
+        break;
+      case 'suspicious':
+        title = '⚠️ Suspicious Message';
+        description = 'This message shows some suspicious patterns. Please be cautious and verify before taking any action.';
+        break;
+      case 'safe':
+        title = '✅ Safe Message';
+        description = 'This message appears to be safe.';
+        break;
+    }
+
+    Alert.alert(
+      title,
+      `${description}\n\nMessage content: ${message}`,
+      [{ text: 'OK', style: 'default' }]
+    );
+  };
+
   // Function to handle scanning (in Expo, we'll need to manually add messages for demo)
   const handleScanMessage = async () => {
-    if (!isAvailable) {
+    if (!isAvailable || isProcessing) {
       Alert.alert('Not Available', 'SMS functionality is not available on this device');
       return;
     }
+
+    setIsProcessing(true);
     
-    // In a real app, you'd integrate with a phishing detection API here
-    // For demo purposes, we'll add a mock message
+    const mockText = await generateMockText();
+    const riskLevel = await analyzeMessage(mockText);
+    
     const mockMessage = {
       id: Date.now().toString(),
       sender: '+1234567890',
-      preview: 'Your account has been locked. Click here to verify: bit.ly/suspicious-link',
+      preview: mockText,
       timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-      risk: ['high', 'suspicious', 'safe'][Math.floor(Math.random() * 3)] as 'high' | 'suspicious' | 'safe'
+      risk: riskLevel
     };
     
     setMessages(prevMessages => [mockMessage, ...prevMessages]);
+    setTimeout(() => showRiskAlert(riskLevel, mockText), 500);
+    setIsProcessing(false);
   };
 
   const getRiskIcon = (risk: string) => {
@@ -93,7 +168,10 @@ export default function MessagesScreen() {
         data={messages}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <TouchableOpacity style={styles.messageItem}>
+          <TouchableOpacity 
+            style={styles.messageItem}
+            onPress={() => showRiskAlert(item.risk, item.preview)}
+          >
             <View style={[styles.riskIndicator, getRiskStyle(item.risk)]}>
               {getRiskIcon(item.risk)}
             </View>
@@ -116,12 +194,17 @@ export default function MessagesScreen() {
       />
 
       <TouchableOpacity 
-        style={[styles.scanButton, !isAvailable && styles.disabledButton]} 
+        style={[
+          styles.scanButton, 
+          (!isAvailable || isProcessing) && styles.disabledButton
+        ]} 
         onPress={handleScanMessage}
-        disabled={!isAvailable}
+        disabled={!isAvailable || isProcessing}
       >
         <MessageSquare size={24} color="#fff" />
-        <Text style={styles.scanButtonText}>Add Demo Message</Text>
+        <Text style={styles.scanButtonText}>
+          {isProcessing ? 'Processing...' : 'Add Demo Message'}
+        </Text>
       </TouchableOpacity>
     </View>
   );
