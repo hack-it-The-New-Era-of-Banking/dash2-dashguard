@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { collection, getDocs, query, orderBy, Timestamp } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 
+// Type definition for report
 type Report = {
   id: string;
   type: string;
@@ -16,12 +17,10 @@ type Report = {
 
 export default function ReportsScreen() {
   const { isDarkMode, colors } = useTheme();
-
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log('Fetching reports...');
     const fetchReports = async () => {
       try {
         const reportsRef = collection(db, 'reportedNumbers');
@@ -34,7 +33,6 @@ export default function ReportsScreen() {
             ...reportData,
           };
         });
-        console.log('Fetched reports:'); // <- this doesn’t show
         setReports(data);
       } catch (error) {
         console.error('Error fetching reports:', error);
@@ -63,57 +61,29 @@ export default function ReportsScreen() {
 
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Latest Reports</Text>
-        {[1, 2, 3, 4].map((item) => (
-          <TouchableOpacity key={item} style={[styles.reportItem, { backgroundColor: colors.surface }]}>
-            <View style={styles.reportHeader}>
-              <View style={styles.reportType}>
-                {item % 2 === 0 ? (
-                  <Phone size={20} color={colors.primary} />
-                ) : (
-                  <MessageSquare size={20} color={colors.primary} />
-                )}
-                <Text style={[styles.reportCategory, { color: colors.primary }]}>
-                  {item % 2 === 0 ? 'Call Scam' : 'SMS Scam'}
-        <Text style={styles.sectionTitle}>Latest Reports</Text>
 
         {loading ? (
           <ActivityIndicator size="large" color="#6366F1" style={{ marginTop: 20 }} />
         ) : (
           reports.map((report) => (
-            <TouchableOpacity key={report.id} style={styles.reportItem}>
+            <TouchableOpacity key={report.id} style={[styles.reportItem, { backgroundColor: colors.surface }]}>
               <View style={styles.reportHeader}>
                 <View style={styles.reportType}>
                   {report.type === 'Call' ? (
-                    <Phone size={20} color="#6366F1" />
+                    <Phone size={20} color={colors.primary} />
                   ) : (
-                    <MessageSquare size={20} color="#6366F1" />
+                    <MessageSquare size={20} color={colors.primary} />
                   )}
-                  <Text style={styles.reportCategory}>
+                  <Text style={[styles.reportCategory, { color: colors.primary }]}>  
                     {report.type === 'Call' ? 'Call Scam' : 'SMS Scam'}
                   </Text>
                 </View>
-                <Text style={styles.reportTime}>
+                <Text style={[styles.reportTime, { color: colors.textSecondary }]}>  
                   {report.reportedAt?.toDate().toLocaleString() ?? 'Unknown time'}
                 </Text>
               </View>
-              <Text style={[styles.reportTime, { color: colors.textSecondary }]}>2h ago</Text>
-            </View>
-            <Text style={[styles.reportDescription, { color: colors.text }]}>
-              {item % 2 === 0
-                ? 'Caller claiming to be from BDO Bank requesting OTP'
-                : 'SMS message about winning a prize and requesting personal information'}
-            </Text>
-            <View style={styles.reportFooter}>
-              <View style={styles.reportStatus}>
-                <AlertTriangle size={16} color="#DC2626" />
-                <Text style={styles.statusText}>High Risk</Text>
-              </View>
-              <Text style={[styles.reportNumber, { color: colors.textSecondary }]}>+63 912 XXX XXXX</Text>
-            </View>
-          </TouchableOpacity>
-        ))}
 
-              <Text style={styles.reportDescription}>
+              <Text style={[styles.reportDescription, { color: colors.text }]}>
                 {report.description}
               </Text>
 
@@ -122,7 +92,9 @@ export default function ReportsScreen() {
                   <AlertTriangle size={16} color="#DC2626" />
                   <Text style={styles.statusText}>{report.severity || 'Unknown'}</Text>
                 </View>
-                <Text style={styles.reportNumber}>{report.phoneNumber}</Text>
+                <Text style={[styles.reportNumber, { color: colors.textSecondary }]}>  
+                  {report.phoneNumber}
+                </Text>
               </View>
             </TouchableOpacity>
           ))
@@ -248,4 +220,3 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
 });
-

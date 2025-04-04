@@ -1,152 +1,109 @@
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
-import { MessageSquare, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle } from 'lucide-react-native';
-import { useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useTheme } from './darktheme';
-
-export default function MessagesScreen() {
-  // Use the theme context to get colors and dark mode state
-  const { isDarkMode, colors } = useTheme();
-
-  // Risk scoring thresholds
-  const RISK_THRESHOLDS = {
-    HIGH_RISK: 7,
-    SUSPICIOUS: 4
-  };
-
-  // Risk scoring patterns
-  const riskPatterns = {
-    highRisk: {
-      urgentAction: /(click here|reply (now|immediately)|act now|urgent|limited time)/i,
-      accountThreats: /(account.*(suspend|clos|block|terminat|deactivat))/i,
-      bankImpersonation: /(BDO|BPI|Security Bank|Metrobank|UnionBank)/i,
-      prizes: /(won|winner|prize|claim|reward|congratulation)/i,
-      personalInfo: /(verify.*identity|send.*(password|pin|otp|cvv))/i,
-      moneyRequests: /(send|transfer|payment|fee|charge)/i,
-      legalThreats: /(legal|lawsuit|police|arrest|criminal)/i
-    },
-    suspicious: {
-      genericGreeting: /(dear.*customer|valued.*client)/i,
-      badGrammar: /(!+|\?+|[A-Z]{3,})/,
-      unverifiedOffers: /(offer|promo|discount|deal|save)/i,
-      verification: /(verify|confirm|validate|authenticate)/i,
-      links: /(http|www|\.com|\.ph|bit\.ly)/i
-    },
-    safe: {
-      transaction: /(received|sent|transferred|paid|purchased)/i,
-      otpCode: /([0-9]{4,6}.*code|OTP|password)/i,
-      knownSender: /(GCash|PayMaya|Maya|Globe|Smart|PLDT)/i
-    }
-  };
-
-  // Message type definition
-  interface Message {
-    id: string;
-    sender: string;
-    preview: string;
-    timestamp: string;
-    risk: string;
-  }
-
-  // Risk analysis function
-  const analyzeMessageRisk = (message: string, sender: string): string => {
-    let riskScore = 0;
-    
-    // Check high risk patterns
-    for (const pattern of Object.values(riskPatterns.highRisk)) {
-      if (pattern.test(message) || pattern.test(sender)) {
-        riskScore += 3;
-      }
-    }
-
-    // Check suspicious patterns  
-    for (const pattern of Object.values(riskPatterns.suspicious)) {
-      if (pattern.test(message) || pattern.test(sender)) {
-        riskScore += 2;
-      }
-    }
-
-    // Check safe patterns
-    for (const pattern of Object.values(riskPatterns.safe)) {
-      if (pattern.test(message) || pattern.test(sender)) {
-        riskScore -= 2;
-      }
-    }
-
-    // Additional sender checks
-    if (/^\+(?!(63))/.test(sender)) { // International number
-      riskScore += 3;
-    }
-    if (/^\+?[0-9]{11,}$/.test(sender)) { // Unknown mobile number
-      riskScore += 2;
-    }
-
-    // Determine risk level based on score
-    if (riskScore >= RISK_THRESHOLDS.HIGH_RISK) {
-      return 'high';
-    } else if (riskScore >= RISK_THRESHOLDS.SUSPICIOUS) {
-      return 'suspicious';
-    }
-    return 'safe';
-  };
-
-  const messages = [
-    {
-      id: '1',
-      sender: '+63 912 345 6789',
-      preview: 'Your BDO account has been temporarily suspended. Click here to...',
-      timestamp: '2:30 PM',
-      risk: analyzeMessageRisk('Your BDO account has been temporarily suspended. Click here to...', '+63 912 345 6789'),
-    },
-    {
-      id: '3',
-      sender: '+63 917 123 4567',
-      preview: 'Congratulations! You\'ve won PHP 50,000. Reply YES to claim...',
-      timestamp: '11:20 AM', 
-      risk: analyzeMessageRisk('Congratulations! You\'ve won PHP 50,000. Reply YES to claim...', '+63 917 123 4567'),
-    },
-  ];
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { MessageSquare } from 'lucide-react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
+import {
+  MessageSquare,
+  TriangleAlert as AlertTriangle,
+  CircleCheck as CheckCircle,
+} from 'lucide-react-native';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import dayjs from 'dayjs';
+import { useTheme } from './darktheme';
 
-type Message = {
+// ----------------------------
+// Type Definitions
+// ----------------------------
+interface Message {
   id: string;
   sender: string;
   preview: string;
   timestamp: string;
-  severity: string; // Display severity directly
+  risk: string;
+}
+
+// ----------------------------
+// Risk Analysis Logic
+// ----------------------------
+const RISK_THRESHOLDS = {
+  HIGH_RISK: 7,
+  SUSPICIOUS: 4,
 };
 
-  const getRiskIcon = (risk: string) => {
-    switch (risk) {
-      case 'high':
-        return <AlertTriangle size={20} color="#DC2626" />;
-      case 'suspicious':
-        return <AlertTriangle size={20} color="#D97706" />;
-      case 'safe':
-        return <CheckCircle size={20} color="#059669" />;
-      default:
-        return null;
-    }
-  };
+const riskPatterns = {
+  highRisk: {
+    urgentAction: /(click here|reply (now|immediately)|act now|urgent|limited time)/i,
+    accountThreats: /(account.*(suspend|clos|block|terminat|deactivat))/i,
+    bankImpersonation: /(BDO|BPI|Security Bank|Metrobank|UnionBank)/i,
+    prizes: /(won|winner|prize|claim|reward|congratulation)/i,
+    personalInfo: /(verify.*identity|send.*(password|pin|otp|cvv))/i,
+    moneyRequests: /(send|transfer|payment|fee|charge)/i,
+    legalThreats: /(legal|lawsuit|police|arrest|criminal)/i,
+  },
+  suspicious: {
+    genericGreeting: /(dear.*customer|valued.*client)/i,
+    badGrammar: /(!+|\?+|[A-Z]{3,})/,
+    unverifiedOffers: /(offer|promo|discount|deal|save)/i,
+    verification: /(verify|confirm|validate|authenticate)/i,
+    links: /(http|www|\.com|\.ph|bit\.ly)/i,
+  },
+  safe: {
+    transaction: /(received|sent|transferred|paid|purchased)/i,
+    otpCode: /([0-9]{4,6}.*code|OTP|password)/i,
+    knownSender: /(GCash|PayMaya|Maya|Globe|Smart|PLDT)/i,
+  },
+};
 
-  const getRiskStyle = (risk: string) => {
-    switch (risk) {
-      case 'high':
-        return styles.highRisk;
-      case 'suspicious':
-        return styles.suspicious;
-      case 'safe':
-        return styles.safe;
-      default:
-        return {};
-    }
-  };
+const analyzeMessageRisk = (message: string, sender: string): string => {
+  let riskScore = 0;
+
+  Object.values(riskPatterns.highRisk).forEach((pattern) => {
+    if (pattern.test(message) || pattern.test(sender)) riskScore += 3;
+  });
+
+  Object.values(riskPatterns.suspicious).forEach((pattern) => {
+    if (pattern.test(message) || pattern.test(sender)) riskScore += 2;
+  });
+
+  Object.values(riskPatterns.safe).forEach((pattern) => {
+    if (pattern.test(message) || pattern.test(sender)) riskScore -= 2;
+  });
+
+  if (/^\+(?!(63))/.test(sender)) riskScore += 3;
+  if (/^\+?[0-9]{11,}$/.test(sender)) riskScore += 2;
+
+  if (riskScore >= RISK_THRESHOLDS.HIGH_RISK) return 'high';
+  if (riskScore >= RISK_THRESHOLDS.SUSPICIOUS) return 'suspicious';
+  return 'safe';
+};
+
+// ----------------------------
+// Risk Helpers
+// ----------------------------
+const getRiskIcon = (risk: string) => {
+  switch (risk) {
+    case 'high':
+      return <AlertTriangle size={20} color="#DC2626" />;
+    case 'suspicious':
+      return <AlertTriangle size={20} color="#D97706" />;
+    case 'safe':
+      return <CheckCircle size={20} color="#059669" />;
+    default:
+      return null;
+  }
+};
+
+// ----------------------------
+// Main Component
+// ----------------------------
 export default function MessagesScreen() {
+  const { isDarkMode, colors } = useTheme();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -155,21 +112,24 @@ export default function MessagesScreen() {
 
     const unsubscribe = onSnapshot(
       q,
-      snapshot => {
-        const fetchedMessages: Message[] = snapshot.docs.map(doc => {
+      (snapshot) => {
+        const fetchedMessages: Message[] = snapshot.docs.map((doc) => {
           const data = doc.data();
+          const msg = data.message || '';
+          const sender = data.phoneNumber || '';
+
           return {
             id: doc.id,
-            sender: data.phoneNumber,
-            preview: data.message,
+            sender,
+            preview: msg,
             timestamp: data.timestamp?.toDate ? dayjs(data.timestamp.toDate()).format('h:mm A') : 'N/A',
-            severity: data.severity || 'Unknown', // Fetch severity directly
+            risk: data.risk || analyzeMessageRisk(msg, sender), // fallback to local risk analysis
           };
         });
         setMessages(fetchedMessages);
         setLoading(false);
       },
-      error => {
+      (error) => {
         console.error('Error fetching messages:', error);
         setLoading(false);
       }
@@ -185,46 +145,25 @@ export default function MessagesScreen() {
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Scanned messages appear here</Text>
       </View>
 
-      <FlatList
-        data={messages}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <TouchableOpacity style={[styles.messageItem, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-            <View style={[styles.riskIndicator, getRiskStyle(item.risk)]}>
-              {getRiskIcon(item.risk)}
-            </View>
-            <View style={styles.messageContent}>
-              <View style={styles.messageHeader}>
-                <Text style={[styles.sender, { color: colors.text }]}>{item.sender}</Text>
-                <Text style={[styles.timestamp, { color: colors.textSecondary }]}>{item.timestamp}</Text>
-              </View>
-              <Text style={[styles.preview, { color: colors.textSecondary }]} numberOfLines={2}>
-                {item.preview}
-              </Text>
-            </View>
-          </TouchableOpacity>
-        )}
-      />
       {loading ? (
         <ActivityIndicator size="large" color="#6366F1" style={{ marginTop: 32 }} />
       ) : (
         <FlatList
           data={messages}
-          keyExtractor={item => item.id}
+          keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <TouchableOpacity style={styles.messageItem}>
+            <TouchableOpacity style={[styles.messageItem, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+              <View style={styles.riskIndicator}>{getRiskIcon(item.risk)}</View>
               <View style={styles.messageContent}>
                 <View style={styles.messageHeader}>
-                  <Text style={styles.sender}>{item.sender}</Text>
-                  <Text style={styles.timestamp}>{item.timestamp}</Text>
+                  <Text style={[styles.sender, { color: colors.text }]}>{item.sender}</Text>
+                  <Text style={[styles.timestamp, { color: colors.textSecondary }]}>{item.timestamp}</Text>
                 </View>
-                <Text style={styles.preview} numberOfLines={2}>
+                <Text style={[styles.preview, { color: colors.textSecondary }]} numberOfLines={2}>
                   {item.preview}
                 </Text>
-
-                {/* Display Severity here */}
-                <Text style={styles.severity}>
-                  Severity: {item.severity}
+                <Text style={[styles.riskLabel, getRiskLabelStyle(item.risk)]}>
+                  Risk: {item.risk.toUpperCase()}
                 </Text>
               </View>
             </TouchableOpacity>
@@ -240,7 +179,22 @@ export default function MessagesScreen() {
   );
 }
 
+// ----------------------------
 // Styles
+// ----------------------------
+const getRiskLabelStyle = (risk: string) => {
+  switch (risk) {
+    case 'high':
+      return { color: '#DC2626' };
+    case 'suspicious':
+      return { color: '#D97706' };
+    case 'safe':
+      return { color: '#059669' };
+    default:
+      return {};
+  }
+};
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -262,6 +216,11 @@ const styles = StyleSheet.create({
     padding: 16,
     borderBottomWidth: 1,
   },
+  riskIndicator: {
+    marginRight: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   messageContent: {
     flex: 1,
   },
@@ -281,10 +240,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
-  severity: {
-    color: 'red',
+  riskLabel: {
     fontWeight: 'bold',
-    marginTop: 4,
+    marginTop: 6,
   },
   scanButton: {
     position: 'absolute',
