@@ -1,7 +1,7 @@
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Platform, Alert } from 'react-native';
 import { MessageSquare, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import SmsRetriever, { SmsListenerEvent } from 'react-native-sms-retriever';
+import * as SMS from 'expo-sms';
 
 interface Message {
   id: string;
@@ -13,45 +13,41 @@ interface Message {
 
 export default function MessagesScreen() {
   const [messages, setMessages] = useState<Message[]>([]);
+  const [isAvailable, setIsAvailable] = useState(false);
 
   useEffect(() => {
-    // Start listening to incoming SMS
-    const startSmsListener = async () => {
-      try {
-        const registered = await SmsRetriever.startSmsRetriever();
-        if (registered) {
-          SmsRetriever.addSmsListener((event: SmsListenerEvent) => {
-            const { message } = event;
-            
-            if (message) { // Check if message exists
-              const timeStamp = Date.now();
-              
-              // Add new message to state
-              // Risk level would need to be determined by your scanning logic
-              const newMessage: Message = {
-                id: timeStamp.toString(),
-                sender: 'Unknown', // Sender info not available in event
-                preview: message,
-                timestamp: new Date(timeStamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-                risk: 'suspicious' // Default to suspicious until scanned
-              };
-              
-              setMessages(prevMessages => [newMessage, ...prevMessages]);
-            }
-          });
-        }
-      } catch (error) {
-        console.error(error);
+    // Check if SMS is available on the device
+    const checkSmsAvailability = async () => {
+      const isSmsAvailable = await SMS.isAvailableAsync();
+      setIsAvailable(isSmsAvailable);
+      
+      if (!isSmsAvailable) {
+        console.log('SMS is not available on this device');
       }
     };
 
-    startSmsListener();
-
-    // Cleanup listener
-    return () => {
-      SmsRetriever.removeSmsListener();
-    };
+    checkSmsAvailability();
   }, []);
+
+  // Function to handle scanning (in Expo, we'll need to manually add messages for demo)
+  const handleScanMessage = async () => {
+    if (!isAvailable) {
+      Alert.alert('Not Available', 'SMS functionality is not available on this device');
+      return;
+    }
+    
+    // In a real app, you'd integrate with a phishing detection API here
+    // For demo purposes, we'll add a mock message
+    const mockMessage = {
+      id: Date.now().toString(),
+      sender: '+1234567890',
+      preview: 'Your account has been locked. Click here to verify: bit.ly/suspicious-link',
+      timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+      risk: ['high', 'suspicious', 'safe'][Math.floor(Math.random() * 3)] as 'high' | 'suspicious' | 'safe'
+    };
+    
+    setMessages(prevMessages => [mockMessage, ...prevMessages]);
+  };
 
   const getRiskIcon = (risk: string) => {
     switch (risk) {
@@ -86,6 +82,13 @@ export default function MessagesScreen() {
         <Text style={styles.subtitle}>Scanned messages appear here</Text>
       </View>
 
+      {!isAvailable && (
+        <View style={styles.notSupportedBanner}>
+          <AlertTriangle size={18} color="#DC2626" />
+          <Text style={styles.notSupportedText}>SMS functionality is not available on this device</Text>
+        </View>
+      )}
+
       <FlatList
         data={messages}
         keyExtractor={(item) => item.id}
@@ -105,11 +108,20 @@ export default function MessagesScreen() {
             </View>
           </TouchableOpacity>
         )}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No messages scanned yet</Text>
+          </View>
+        }
       />
 
-      <TouchableOpacity style={styles.scanButton}>
+      <TouchableOpacity 
+        style={[styles.scanButton, !isAvailable && styles.disabledButton]} 
+        onPress={handleScanMessage}
+        disabled={!isAvailable}
+      >
         <MessageSquare size={24} color="#fff" />
-        <Text style={styles.scanButtonText}>Scan New Message</Text>
+        <Text style={styles.scanButtonText}>Add Demo Message</Text>
       </TouchableOpacity>
     </View>
   );
@@ -134,6 +146,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#6B7280',
     marginTop: 4,
+  },
+  notSupportedBanner: {
+    backgroundColor: '#FEE2E2',
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  notSupportedText: {
+    color: '#B91C1C',
+    marginLeft: 8,
+    fontSize: 14,
   },
   messageItem: {
     flexDirection: 'row',
@@ -182,6 +206,16 @@ const styles = StyleSheet.create({
     color: '#4B5563',
     lineHeight: 20,
   },
+  emptyContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 60,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#6B7280',
+  },
   scanButton: {
     position: 'absolute',
     bottom: 24,
@@ -199,6 +233,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4.65,
     elevation: 8,
+  },
+  disabledButton: {
+    backgroundColor: '#9CA3AF',
+    shadowColor: '#9CA3AF',
   },
   scanButtonText: {
     color: '#fff',
