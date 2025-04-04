@@ -1,11 +1,78 @@
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
-import { Shield, TriangleAlert as AlertTriangle, MessageSquare } from 'lucide-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Shield as ShieldIcon, TriangleAlert as AlertTriangle, MessageSquare } from 'lucide-react-native';
 import { useTheme } from './darktheme'; // Update with correct path
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  withSpring,
+} from 'react-native-reanimated';
 
 export default function ProtectScreen() {
   // Use the theme context to get colors and dark mode state
   const { isDarkMode, colors } = useTheme();
+
+  // State to manage protection status
+  const [isProtectionActive, setIsProtectionActive] = useState(true);
+
+  // Reanimated shared values for animations
+  const scalePulse = useSharedValue(1); // For glowing effect
+  const scaleClick = useSharedValue(1); // For click effect
+  const rotate = useSharedValue(0); // For rotation effect
+
+  // Function to toggle protection status
+  const toggleProtection = () => {
+    setIsProtectionActive((prev) => !prev);
+  };
+
+  // Start pulsating and rotation animations when protection is active
+  React.useEffect(() => {
+    if (isProtectionActive) {
+      scalePulse.value = withRepeat(
+        withTiming(1.3, { duration: 1000 }), // Scale up
+        -1, // Repeat infinitely
+        true // Reverse direction
+      );
+      rotate.value = withRepeat(withTiming(360, { duration: 4000 }), -1, false); // Rotate 360 degrees
+    } else {
+      scalePulse.value = withTiming(1, { duration: 300 }); // Reset scale
+      rotate.value = withTiming(0, { duration: 300 }); // Reset rotation
+    }
+  }, [isProtectionActive]);
+
+  // Animated style for the glow effect
+  const animatedGlowStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: scalePulse.value }],
+      opacity: 1 - (scalePulse.value - 1) / 0.3, // Fade out as it scales up
+    };
+  });
+
+  // Animated style for the button (click effect)
+  const animatedClickStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: scaleClick.value }],
+    };
+  });
+
+  // Animated style for the shield icon (rotation effect)
+  const animatedRotationStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ rotate: `${rotate.value}deg` }], // Rotate based on shared value
+    };
+  });
+
+  // Handle press-in event
+  const onPressIn = () => {
+    scaleClick.value = withSpring(0.95); // Scale down slightly
+  };
+
+  // Handle press-out event
+  const onPressOut = () => {
+    scaleClick.value = withSpring(1); // Return to original size
+  };
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -14,15 +81,32 @@ export default function ProtectScreen() {
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Your Protection Against Scams</Text>
       </View>
 
-      <LinearGradient
-        colors={['#6366F1', '#4F46E5']}
-        style={styles.statsCard}>
-        <View style={styles.statsContent}>
-          <Shield size={32} color="#fff" />
-          <Text style={styles.statsTitle}>Protection Active</Text>
-          <Text style={styles.statsSubtitle}>Monitoring messages and calls</Text>
-        </View>
-      </LinearGradient>
+      {/* Protection Toggle Section */}
+      <View style={styles.toggleContainer}>
+        <TouchableOpacity
+          onPress={toggleProtection}
+          onPressIn={onPressIn}
+          onPressOut={onPressOut}
+          activeOpacity={1} // Prevent default opacity animation
+        >
+          <Animated.View style={[styles.toggleButton, animatedClickStyle]}>
+            {/* Glowing Circle */}
+            <Animated.View style={[styles.glow, animatedGlowStyle]} />
+            {/* Shield Icon */}
+            <Animated.View style={[styles.shieldIconContainer, animatedRotationStyle]}>
+              <ShieldIcon
+                size={48}
+                color={isProtectionActive ? '#fff' : '#6366F1'} // Color changes based on state
+                fill={isProtectionActive ? '#fff' : 'none'} // Fill changes based on state
+                strokeWidth={isProtectionActive ? undefined : 2} // Stroke width for hollow state
+              />
+            </Animated.View>
+            <Text style={styles.toggleButtonText}>
+              {isProtectionActive ? 'Protection Active' : 'Protection Inactive'}
+            </Text>
+          </Animated.View>
+        </TouchableOpacity>
+      </View>
 
       <View style={styles.grid}>
         <View style={styles.gridItem}>
@@ -91,24 +175,37 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginTop: 4,
   },
-  statsCard: {
-    margin: 16,
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  statsContent: {
-    padding: 24,
+  toggleContainer: {
     alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 24,
   },
-  statsTitle: {
+  toggleButton: {
+    width: 170,
+    height: 170,
+    borderRadius: 75, // Half of width/height for a perfect circle
+    backgroundColor: '#6366F1', // Primary color for the button
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden', // Ensure glowing circle stays within bounds
+  },
+  glow: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    borderRadius: 75, // Half of width/height for a perfect circle
+    backgroundColor: 'rgba(255, 255, 255, 0.3)', // Semi-transparent white
+  },
+  shieldIconContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  toggleButtonText: {
     color: '#FFFFFF',
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: '600',
-    marginTop: 12,
-  },
-  statsSubtitle: {
-    color: '#E5E7EB',
-    marginTop: 4,
+    marginTop: 8,
+    textAlign: 'center',
   },
   grid: {
     flexDirection: 'row',
