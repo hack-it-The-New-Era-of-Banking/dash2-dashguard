@@ -1,56 +1,49 @@
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
-import { MessageSquare, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { MessageSquare } from 'lucide-react-native';
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { db } from '../../firebaseConfig';
+import dayjs from 'dayjs';
 
-const messages = [
-  {
-    id: '1',
-    sender: '+63 912 345 6789',
-    preview: 'Your BDO account has been temporarily suspended. Click here to...',
-    timestamp: '2:30 PM',
-    risk: 'high',
-  },
-  {
-    id: '2',
-    sender: 'GCash',
-    preview: 'Your account has received PHP 1,000.00 from Juan Dela Cruz',
-    timestamp: '1:45 PM',
-    risk: 'safe',
-  },
-  {
-    id: '3',
-    sender: '+63 917 123 4567',
-    preview: 'Congratulations! You\'ve won PHP 50,000. Reply YES to claim...',
-    timestamp: '11:20 AM',
-    risk: 'suspicious',
-  },
-];
+type Message = {
+  id: string;
+  sender: string;
+  preview: string;
+  timestamp: string;
+  severity: string; // Display severity directly
+};
 
 export default function MessagesScreen() {
-  const getRiskIcon = (risk: string) => {
-    switch (risk) {
-      case 'high':
-        return <AlertTriangle size={20} color="#DC2626" />;
-      case 'suspicious':
-        return <AlertTriangle size={20} color="#D97706" />;
-      case 'safe':
-        return <CheckCircle size={20} color="#059669" />;
-      default:
-        return null;
-    }
-  };
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const getRiskStyle = (risk: string) => {
-    switch (risk) {
-      case 'high':
-        return styles.highRisk;
-      case 'suspicious':
-        return styles.suspicious;
-      case 'safe':
-        return styles.safe;
-      default:
-        return {};
-    }
-  };
+  useEffect(() => {
+    const q = query(collection(db, 'flaggedMessages'), orderBy('timestamp', 'desc'));
+
+    const unsubscribe = onSnapshot(
+      q,
+      snapshot => {
+        const fetchedMessages: Message[] = snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            sender: data.phoneNumber,
+            preview: data.message,
+            timestamp: data.timestamp?.toDate ? dayjs(data.timestamp.toDate()).format('h:mm A') : 'N/A',
+            severity: data.severity || 'Unknown', // Fetch severity directly
+          };
+        });
+        setMessages(fetchedMessages);
+        setLoading(false);
+      },
+      error => {
+        console.error('Error fetching messages:', error);
+        setLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -59,26 +52,32 @@ export default function MessagesScreen() {
         <Text style={styles.subtitle}>Scanned messages appear here</Text>
       </View>
 
-      <FlatList
-        data={messages}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <TouchableOpacity style={styles.messageItem}>
-            <View style={[styles.riskIndicator, getRiskStyle(item.risk)]}>
-              {getRiskIcon(item.risk)}
-            </View>
-            <View style={styles.messageContent}>
-              <View style={styles.messageHeader}>
-                <Text style={styles.sender}>{item.sender}</Text>
-                <Text style={styles.timestamp}>{item.timestamp}</Text>
+      {loading ? (
+        <ActivityIndicator size="large" color="#6366F1" style={{ marginTop: 32 }} />
+      ) : (
+        <FlatList
+          data={messages}
+          keyExtractor={item => item.id}
+          renderItem={({ item }) => (
+            <TouchableOpacity style={styles.messageItem}>
+              <View style={styles.messageContent}>
+                <View style={styles.messageHeader}>
+                  <Text style={styles.sender}>{item.sender}</Text>
+                  <Text style={styles.timestamp}>{item.timestamp}</Text>
+                </View>
+                <Text style={styles.preview} numberOfLines={2}>
+                  {item.preview}
+                </Text>
+
+                {/* Display Severity here */}
+                <Text style={styles.severity}>
+                  Severity: {item.severity}
+                </Text>
               </View>
-              <Text style={styles.preview} numberOfLines={2}>
-                {item.preview}
-              </Text>
-            </View>
-          </TouchableOpacity>
-        )}
-      />
+            </TouchableOpacity>
+          )}
+        />
+      )}
 
       <TouchableOpacity style={styles.scanButton}>
         <MessageSquare size={24} color="#fff" />
@@ -115,23 +114,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
-  riskIndicator: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  highRisk: {
-    backgroundColor: '#FEE2E2',
-  },
-  suspicious: {
-    backgroundColor: '#FEF3C7',
-  },
-  safe: {
-    backgroundColor: '#D1FAE5',
-  },
   messageContent: {
     flex: 1,
   },
@@ -154,6 +136,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#4B5563',
     lineHeight: 20,
+  },
+  severity: {
+    color: 'red',
+    fontWeight: 'bold',
+    marginTop: 4,
   },
   scanButton: {
     position: 'absolute',
