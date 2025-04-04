@@ -1,31 +1,58 @@
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { MessageSquare, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
+import SmsRetriever, { SmsListenerEvent } from 'react-native-sms-retriever';
 
-const messages = [
-  {
-    id: '1',
-    sender: '+63 912 345 6789',
-    preview: 'Your BDO account has been temporarily suspended. Click here to...',
-    timestamp: '2:30 PM',
-    risk: 'high',
-  },
-  {
-    id: '2',
-    sender: 'GCash',
-    preview: 'Your account has received PHP 1,000.00 from Juan Dela Cruz',
-    timestamp: '1:45 PM',
-    risk: 'safe',
-  },
-  {
-    id: '3',
-    sender: '+63 917 123 4567',
-    preview: 'Congratulations! You\'ve won PHP 50,000. Reply YES to claim...',
-    timestamp: '11:20 AM',
-    risk: 'suspicious',
-  },
-];
+interface Message {
+  id: string;
+  sender: string; 
+  preview: string;
+  timestamp: string;
+  risk: 'high' | 'suspicious' | 'safe';
+}
 
 export default function MessagesScreen() {
+  const [messages, setMessages] = useState<Message[]>([]);
+
+  useEffect(() => {
+    // Start listening to incoming SMS
+    const startSmsListener = async () => {
+      try {
+        const registered = await SmsRetriever.startSmsRetriever();
+        if (registered) {
+          SmsRetriever.addSmsListener((event: SmsListenerEvent) => {
+            const { message } = event;
+            
+            if (message) { // Check if message exists
+              const timeStamp = Date.now();
+              
+              // Add new message to state
+              // Risk level would need to be determined by your scanning logic
+              const newMessage: Message = {
+                id: timeStamp.toString(),
+                sender: 'Unknown', // Sender info not available in event
+                preview: message,
+                timestamp: new Date(timeStamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                risk: 'suspicious' // Default to suspicious until scanned
+              };
+              
+              setMessages(prevMessages => [newMessage, ...prevMessages]);
+            }
+          });
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    startSmsListener();
+
+    // Cleanup listener
+    return () => {
+      SmsRetriever.removeSmsListener();
+    };
+  }, []);
+
   const getRiskIcon = (risk: string) => {
     switch (risk) {
       case 'high':
