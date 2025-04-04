@@ -99,13 +99,6 @@ export default function MessagesScreen() {
       risk: analyzeMessageRisk('Your BDO account has been temporarily suspended. Click here to...', '+63 912 345 6789'),
     },
     {
-      id: '2',
-      sender: 'GCash', 
-      preview: 'Your account has received PHP 1,000.00 from Juan Dela Cruz',
-      timestamp: '1:45 PM',
-      risk: analyzeMessageRisk('Your account has received PHP 1,000.00 from Juan Dela Cruz', 'GCash'),
-    },
-    {
       id: '3',
       sender: '+63 917 123 4567',
       preview: 'Congratulations! You\'ve won PHP 50,000. Reply YES to claim...',

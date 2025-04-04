@@ -1,8 +1,14 @@
 import { Tabs } from 'expo-router';
-import { Shield, MessageSquare, TriangleAlert as AlertTriangle, Settings } from 'lucide-react-native';
+import {
+  Shield,
+  MessageSquare, 
+  TriangleAlert as AlertTriangle,
+  Settings,
+  LogIn,
+} from 'lucide-react-native';
 import { ThemeProvider, useTheme } from './darktheme'; // Update with correct path
 
-// TabNavigator component that uses the theme context
+// TabNavigator component that uses the theme context 
 function TabNavigator() {
   const { colors } = useTheme();
 
@@ -19,7 +25,8 @@ function TabNavigator() {
         },
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textSecondary,
-      }}>
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
@@ -31,21 +38,36 @@ function TabNavigator() {
         name="messages"
         options={{
           title: 'Messages',
-          tabBarIcon: ({ color, size }) => <MessageSquare size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => (
+            <MessageSquare size={size} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="reports"
         options={{
           title: 'Reports',
-          tabBarIcon: ({ color, size }) => <AlertTriangle size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => (
+            <AlertTriangle size={size} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: 'Settings',
-          tabBarIcon: ({ color, size }) => <Settings size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => (
+            <Settings size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="login"
+        options={{
+          title: 'Login',
+          tabBarIcon: ({ color, size }) => (
+            <LogIn size={size} color={color} />
+          ),
         }}
       />
     </Tabs>
