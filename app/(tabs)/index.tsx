@@ -1,13 +1,17 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { Shield, TriangleAlert as AlertTriangle, MessageSquare } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTheme } from './darktheme'; // Update with correct path
 
 export default function ProtectScreen() {
+  // Use the theme context to get colors and dark mode state
+  const { isDarkMode, colors } = useTheme();
+
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>DashGuard</Text>
-        <Text style={styles.subtitle}>Your Protection Against Scams</Text>
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.surface }]}>
+        <Text style={[styles.title, { color: colors.text }]}>DashGuard</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Your Protection Against Scams</Text>
       </View>
 
       <LinearGradient
@@ -22,32 +26,35 @@ export default function ProtectScreen() {
 
       <View style={styles.grid}>
         <View style={styles.gridItem}>
-          <View style={[styles.statBox, { backgroundColor: '#FEF3C7' }]}>
+          <View style={[styles.statBox, { backgroundColor: isDarkMode ? '#3F3F46' : '#FEF3C7' }]}>
             <AlertTriangle size={24} color="#D97706" />
-            <Text style={[styles.statNumber, { color: '#D97706' }]}>12</Text>
-            <Text style={styles.statLabel}>Threats Blocked</Text>
+            <Text style={[styles.statNumber, { color: isDarkMode ? '#FBBF24' : '#D97706' }]}>12</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Threats Blocked</Text>
           </View>
         </View>
         <View style={styles.gridItem}>
-          <View style={[styles.statBox, { backgroundColor: '#E0E7FF' }]}>
+          <View style={[styles.statBox, { backgroundColor: isDarkMode ? '#3F3F46' : '#E0E7FF' }]}>
             <MessageSquare size={24} color="#4F46E5" />
-            <Text style={[styles.statNumber, { color: '#4F46E5' }]}>48</Text>
-            <Text style={styles.statLabel}>Messages Scanned</Text>
+            <Text style={[styles.statNumber, { color: isDarkMode ? '#818CF8' : '#4F46E5' }]}>48</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Messages Scanned</Text>
           </View>
         </View>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Recent Activity</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Recent Activity</Text>
         <View style={styles.activityList}>
           {[1, 2, 3].map((item) => (
-            <TouchableOpacity key={item} style={styles.activityItem}>
-              <View style={styles.activityIcon}>
+            <TouchableOpacity key={item} style={[styles.activityItem, { 
+              backgroundColor: colors.surface,
+              borderColor: colors.border
+            }]}>
+              <View style={[styles.activityIcon, { backgroundColor: colors.iconBackground }]}>
                 <AlertTriangle size={20} color="#DC2626" />
               </View>
               <View style={styles.activityContent}>
-                <Text style={styles.activityTitle}>Suspicious Message Blocked</Text>
-                <Text style={styles.activityTime}>2 hours ago</Text>
+                <Text style={[styles.activityTitle, { color: colors.text }]}>Suspicious Message Blocked</Text>
+                <Text style={[styles.activityTime, { color: colors.textSecondary }]}>2 hours ago</Text>
               </View>
             </TouchableOpacity>
           ))}
@@ -55,12 +62,12 @@ export default function ProtectScreen() {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Safety Tips</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Safety Tips</Text>
         <Image
           source={{ uri: 'https://images.unsplash.com/photo-1586892477838-2b96f85b0085?q=80&w=2340&auto=format&fit=crop' }}
           style={styles.tipsImage}
         />
-        <Text style={styles.tipsText}>
+        <Text style={[styles.tipsText, { color: colors.textSecondary }]}>
           Never share your OTP or banking credentials. Legitimate banks will never ask for this information.
         </Text>
       </View>
@@ -71,21 +78,17 @@ export default function ProtectScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
   },
   header: {
     padding: 24,
     paddingTop: 60,
-    backgroundColor: '#fff',
   },
   title: {
     fontSize: 32,
     fontWeight: '700',
-    color: '#1F2937',
   },
   subtitle: {
     fontSize: 16,
-    color: '#6B7280',
     marginTop: 4,
   },
   statsCard: {
@@ -98,13 +101,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statsTitle: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: 20,
     fontWeight: '600',
     marginTop: 12,
   },
   statsSubtitle: {
-    color: '#E0E7FF',
+    color: '#E5E7EB',
     marginTop: 4,
   },
   grid: {
@@ -126,7 +129,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   statLabel: {
-    color: '#4B5563',
     marginTop: 4,
     fontSize: 12,
   },
@@ -136,42 +138,36 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1F2937',
     marginBottom: 16,
   },
   activityList: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    overflow: 'hidden',
+    gap: 12,
   },
   activityItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderRadius: 12,
+    borderWidth: 1,
   },
   activityIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#FEE2E2',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
   },
   activityContent: {
+    marginLeft: 12,
     flex: 1,
   },
   activityTitle: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '500',
-    color: '#1F2937',
   },
   activityTime: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginTop: 2,
+    marginTop: 4,
+    fontSize: 14,
   },
   tipsImage: {
     width: '100%',
@@ -180,8 +176,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   tipsText: {
-    fontSize: 14,
-    color: '#4B5563',
-    lineHeight: 20,
+    lineHeight: 24,
   },
 });

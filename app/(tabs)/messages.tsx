@@ -1,31 +1,119 @@
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { MessageSquare, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle } from 'lucide-react-native';
-
-const messages = [
-  {
-    id: '1',
-    sender: '+63 912 345 6789',
-    preview: 'Your BDO account has been temporarily suspended. Click here to...',
-    timestamp: '2:30 PM',
-    risk: 'high',
-  },
-  {
-    id: '2',
-    sender: 'GCash',
-    preview: 'Your account has received PHP 1,000.00 from Juan Dela Cruz',
-    timestamp: '1:45 PM',
-    risk: 'safe',
-  },
-  {
-    id: '3',
-    sender: '+63 917 123 4567',
-    preview: 'Congratulations! You\'ve won PHP 50,000. Reply YES to claim...',
-    timestamp: '11:20 AM',
-    risk: 'suspicious',
-  },
-];
+import { useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTheme } from './darktheme';
 
 export default function MessagesScreen() {
+  // Use the theme context to get colors and dark mode state
+  const { isDarkMode, colors } = useTheme();
+
+  // Risk scoring thresholds
+  const RISK_THRESHOLDS = {
+    HIGH_RISK: 7,
+    SUSPICIOUS: 4
+  };
+
+  // Risk scoring patterns
+  const riskPatterns = {
+    highRisk: {
+      urgentAction: /(click here|reply (now|immediately)|act now|urgent|limited time)/i,
+      accountThreats: /(account.*(suspend|clos|block|terminat|deactivat))/i,
+      bankImpersonation: /(BDO|BPI|Security Bank|Metrobank|UnionBank)/i,
+      prizes: /(won|winner|prize|claim|reward|congratulation)/i,
+      personalInfo: /(verify.*identity|send.*(password|pin|otp|cvv))/i,
+      moneyRequests: /(send|transfer|payment|fee|charge)/i,
+      legalThreats: /(legal|lawsuit|police|arrest|criminal)/i
+    },
+    suspicious: {
+      genericGreeting: /(dear.*customer|valued.*client)/i,
+      badGrammar: /(!+|\?+|[A-Z]{3,})/,
+      unverifiedOffers: /(offer|promo|discount|deal|save)/i,
+      verification: /(verify|confirm|validate|authenticate)/i,
+      links: /(http|www|\.com|\.ph|bit\.ly)/i
+    },
+    safe: {
+      transaction: /(received|sent|transferred|paid|purchased)/i,
+      otpCode: /([0-9]{4,6}.*code|OTP|password)/i,
+      knownSender: /(GCash|PayMaya|Maya|Globe|Smart|PLDT)/i
+    }
+  };
+
+  // Message type definition
+  interface Message {
+    id: string;
+    sender: string;
+    preview: string;
+    timestamp: string;
+    risk: string;
+  }
+
+  // Risk analysis function
+  const analyzeMessageRisk = (message: string, sender: string): string => {
+    let riskScore = 0;
+    
+    // Check high risk patterns
+    for (const pattern of Object.values(riskPatterns.highRisk)) {
+      if (pattern.test(message) || pattern.test(sender)) {
+        riskScore += 3;
+      }
+    }
+
+    // Check suspicious patterns  
+    for (const pattern of Object.values(riskPatterns.suspicious)) {
+      if (pattern.test(message) || pattern.test(sender)) {
+        riskScore += 2;
+      }
+    }
+
+    // Check safe patterns
+    for (const pattern of Object.values(riskPatterns.safe)) {
+      if (pattern.test(message) || pattern.test(sender)) {
+        riskScore -= 2;
+      }
+    }
+
+    // Additional sender checks
+    if (/^\+(?!(63))/.test(sender)) { // International number
+      riskScore += 3;
+    }
+    if (/^\+?[0-9]{11,}$/.test(sender)) { // Unknown mobile number
+      riskScore += 2;
+    }
+
+    // Determine risk level based on score
+    if (riskScore >= RISK_THRESHOLDS.HIGH_RISK) {
+      return 'high';
+    } else if (riskScore >= RISK_THRESHOLDS.SUSPICIOUS) {
+      return 'suspicious';
+    }
+    return 'safe';
+  };
+
+  const messages = [
+    {
+      id: '1',
+      sender: '+63 912 345 6789',
+      preview: 'Your BDO account has been temporarily suspended. Click here to...',
+      timestamp: '2:30 PM',
+      risk: analyzeMessageRisk('Your BDO account has been temporarily suspended. Click here to...', '+63 912 345 6789'),
+    },
+    {
+      id: '2',
+      sender: 'GCash', 
+      preview: 'Your account has received PHP 1,000.00 from Juan Dela Cruz',
+      timestamp: '1:45 PM',
+      risk: analyzeMessageRisk('Your account has received PHP 1,000.00 from Juan Dela Cruz', 'GCash'),
+    },
+    {
+      id: '3',
+      sender: '+63 917 123 4567',
+      preview: 'Congratulations! You\'ve won PHP 50,000. Reply YES to claim...',
+      timestamp: '11:20 AM', 
+      risk: analyzeMessageRisk('Congratulations! You\'ve won PHP 50,000. Reply YES to claim...', '+63 917 123 4567'),
+    },
+  ];
+
   const getRiskIcon = (risk: string) => {
     switch (risk) {
       case 'high':
@@ -53,26 +141,26 @@ export default function MessagesScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Messages</Text>
-        <Text style={styles.subtitle}>Scanned messages appear here</Text>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.surface }]}>
+        <Text style={[styles.title, { color: colors.text }]}>Messages</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Scanned messages appear here</Text>
       </View>
 
       <FlatList
         data={messages}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <TouchableOpacity style={styles.messageItem}>
+          <TouchableOpacity style={[styles.messageItem, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
             <View style={[styles.riskIndicator, getRiskStyle(item.risk)]}>
               {getRiskIcon(item.risk)}
             </View>
             <View style={styles.messageContent}>
               <View style={styles.messageHeader}>
-                <Text style={styles.sender}>{item.sender}</Text>
-                <Text style={styles.timestamp}>{item.timestamp}</Text>
+                <Text style={[styles.sender, { color: colors.text }]}>{item.sender}</Text>
+                <Text style={[styles.timestamp, { color: colors.textSecondary }]}>{item.timestamp}</Text>
               </View>
-              <Text style={styles.preview} numberOfLines={2}>
+              <Text style={[styles.preview, { color: colors.textSecondary }]} numberOfLines={2}>
                 {item.preview}
               </Text>
             </View>
@@ -91,29 +179,23 @@ export default function MessagesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
   },
   header: {
     padding: 24,
     paddingTop: 60,
-    backgroundColor: '#fff',
   },
   title: {
     fontSize: 32,
     fontWeight: '700',
-    color: '#1F2937',
   },
   subtitle: {
     fontSize: 16,
-    color: '#6B7280',
     marginTop: 4,
   },
   messageItem: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
   },
   riskIndicator: {
     width: 40,
@@ -144,15 +226,12 @@ const styles = StyleSheet.create({
   sender: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1F2937',
   },
   timestamp: {
     fontSize: 12,
-    color: '#6B7280',
   },
   preview: {
     fontSize: 14,
-    color: '#4B5563',
     lineHeight: 20,
   },
   scanButton: {
