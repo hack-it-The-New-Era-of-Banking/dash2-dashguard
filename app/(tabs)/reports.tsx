@@ -1,7 +1,48 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { TriangleAlert as AlertTriangle, Phone, MessageSquare, TrendingUp } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
+import { collection, getDocs, query, orderBy, Timestamp } from 'firebase/firestore';
+import { db } from '../../firebaseConfig';
+
+type Report = {
+  id: string;
+  type: string;
+  description: string;
+  phoneNumber: string;
+  severity: string;
+  reportedAt: Timestamp;
+};
 
 export default function ReportsScreen() {
+  const [reports, setReports] = useState<Report[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    console.log('Fetching reports...');
+    const fetchReports = async () => {
+      try {
+        const reportsRef = collection(db, 'reportedNumbers');
+        const q = query(reportsRef, orderBy('reportedAt', 'desc'));
+        const snapshot = await getDocs(q);
+        const data: Report[] = snapshot.docs.map(doc => {
+          const reportData = doc.data() as Omit<Report, 'id'>;
+          return {
+            id: doc.id,
+            ...reportData,
+          };
+        });
+        console.log('Fetched reports:'); // <- this doesn’t show
+        setReports(data);
+      } catch (error) {
+        console.error('Error fetching reports:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchReports();
+  }, []);
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
@@ -12,42 +53,49 @@ export default function ReportsScreen() {
       <View style={styles.statsContainer}>
         <View style={styles.statCard}>
           <TrendingUp size={24} color="#6366F1" />
-          <Text style={styles.statNumber}>2,547</Text>
+          <Text style={styles.statNumber}>{reports.length}</Text>
           <Text style={styles.statLabel}>Total Reports</Text>
         </View>
       </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Latest Reports</Text>
-        {[1, 2, 3, 4].map((item) => (
-          <TouchableOpacity key={item} style={styles.reportItem}>
-            <View style={styles.reportHeader}>
-              <View style={styles.reportType}>
-                {item % 2 === 0 ? (
-                  <Phone size={20} color="#6366F1" />
-                ) : (
-                  <MessageSquare size={20} color="#6366F1" />
-                )}
-                <Text style={styles.reportCategory}>
-                  {item % 2 === 0 ? 'Call Scam' : 'SMS Scam'}
+
+        {loading ? (
+          <ActivityIndicator size="large" color="#6366F1" style={{ marginTop: 20 }} />
+        ) : (
+          reports.map((report) => (
+            <TouchableOpacity key={report.id} style={styles.reportItem}>
+              <View style={styles.reportHeader}>
+                <View style={styles.reportType}>
+                  {report.type === 'call' ? (
+                    <Phone size={20} color="#6366F1" />
+                  ) : (
+                    <MessageSquare size={20} color="#6366F1" />
+                  )}
+                  <Text style={styles.reportCategory}>
+                    {report.type === 'call' ? 'Call Scam' : 'SMS Scam'}
+                  </Text>
+                </View>
+                <Text style={styles.reportTime}>
+                  {report.reportedAt?.toDate().toLocaleString() ?? 'Unknown time'}
                 </Text>
               </View>
-              <Text style={styles.reportTime}>2h ago</Text>
-            </View>
-            <Text style={styles.reportDescription}>
-              {item % 2 === 0
-                ? 'Caller claiming to be from BDO Bank requesting OTP'
-                : 'SMS message about winning a prize and requesting personal information'}
-            </Text>
-            <View style={styles.reportFooter}>
-              <View style={styles.reportStatus}>
-                <AlertTriangle size={16} color="#DC2626" />
-                <Text style={styles.statusText}>High Risk</Text>
+
+              <Text style={styles.reportDescription}>
+                {report.description}
+              </Text>
+
+              <View style={styles.reportFooter}>
+                <View style={styles.reportStatus}>
+                  <AlertTriangle size={16} color="#DC2626" />
+                  <Text style={styles.statusText}>{report.severity || 'Unknown'}</Text>
+                </View>
+                <Text style={styles.reportNumber}>{report.phoneNumber}</Text>
               </View>
-              <Text style={styles.reportNumber}>+63 912 XXX XXXX</Text>
-            </View>
-          </TouchableOpacity>
-        ))}
+            </TouchableOpacity>
+          ))
+        )}
       </View>
 
       <TouchableOpacity style={styles.reportButton}>
@@ -87,10 +135,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
@@ -174,10 +219,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     shadowColor: '#6366F1',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 4.65,
     elevation: 8,
