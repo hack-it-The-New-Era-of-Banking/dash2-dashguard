@@ -71,21 +71,17 @@ export default function ProtectScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
   },
   header: {
     padding: 24,
     paddingTop: 60,
-    backgroundColor: '#fff',
   },
   title: {
     fontSize: 32,
     fontWeight: '700',
-    color: '#1F2937',
   },
   subtitle: {
     fontSize: 16,
-    color: '#6B7280',
     marginTop: 4,
   },
   statsCard: {
@@ -126,7 +122,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   statLabel: {
-    color: '#4B5563',
     marginTop: 4,
     fontSize: 12,
   },
@@ -136,7 +131,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1F2937',
     marginBottom: 16,
   },
   activityList: {
@@ -155,10 +149,8 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#FEE2E2',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
   },
   activityContent: {
     flex: 1,
@@ -166,7 +158,6 @@ const styles = StyleSheet.create({
   activityTitle: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#1F2937',
   },
   activityTime: {
     fontSize: 12,

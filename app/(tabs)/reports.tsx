@@ -61,28 +61,23 @@ export default function ReportsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
   },
   header: {
     padding: 24,
     paddingTop: 60,
-    backgroundColor: '#fff',
   },
   title: {
     fontSize: 32,
     fontWeight: '700',
-    color: '#1F2937',
   },
   subtitle: {
     fontSize: 16,
-    color: '#6B7280',
     marginTop: 4,
   },
   statsContainer: {
     padding: 16,
   },
   statCard: {
-    backgroundColor: '#fff',
     padding: 24,
     borderRadius: 16,
     alignItems: 'center',
@@ -98,12 +93,10 @@ const styles = StyleSheet.create({
   statNumber: {
     fontSize: 36,
     fontWeight: '700',
-    color: '#1F2937',
     marginTop: 8,
   },
   statLabel: {
     fontSize: 14,
-    color: '#6B7280',
     marginTop: 4,
   },
   section: {
@@ -112,11 +105,9 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1F2937',
     marginBottom: 16,
   },
   reportItem: {
-    backgroundColor: '#fff',
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
@@ -134,16 +125,13 @@ const styles = StyleSheet.create({
   reportCategory: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#6366F1',
     marginLeft: 8,
   },
   reportTime: {
     fontSize: 12,
-    color: '#6B7280',
   },
   reportDescription: {
     fontSize: 14,
-    color: '#1F2937',
     lineHeight: 20,
     marginBottom: 12,
   },
@@ -163,11 +151,9 @@ const styles = StyleSheet.create({
   },
   reportNumber: {
     fontSize: 12,
-    color: '#6B7280',
   },
   reportButton: {
     margin: 16,
-    backgroundColor: '#6366F1',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

@@ -107,7 +107,6 @@ const messages = [
   },
 ];
 
-export default function MessagesScreen() {
   const getRiskIcon = (risk: string) => {
     switch (risk) {
       case 'high':
@@ -173,29 +172,23 @@ export default function MessagesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
   },
   header: {
     padding: 24,
     paddingTop: 60,
-    backgroundColor: '#fff',
   },
   title: {
     fontSize: 32,
     fontWeight: '700',
-    color: '#1F2937',
   },
   subtitle: {
     fontSize: 16,
-    color: '#6B7280',
     marginTop: 4,
   },
   messageItem: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
   },
   riskIndicator: {
     width: 40,
@@ -226,15 +219,12 @@ const styles = StyleSheet.create({
   sender: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1F2937',
   },
   timestamp: {
     fontSize: 12,
-    color: '#6B7280',
   },
   preview: {
     fontSize: 14,
-    color: '#4B5563',
     lineHeight: 20,
   },
   scanButton: {
