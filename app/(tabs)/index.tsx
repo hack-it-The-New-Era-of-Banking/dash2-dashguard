@@ -147,12 +147,14 @@ export default function ProtectScreen() {
 
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Safety Tips</Text>
-        <Image
-          source={{ uri: 'https://images.unsplash.com/photo-1586892477838-2b96f85b0085?q=80&w=2340&auto=format&fit=crop' }}
-          style={styles.tipsImage}
-        />
         <Text style={[styles.tipsText, { color: colors.textSecondary }]}>
-          Never share your OTP or banking credentials. Legitimate banks will never ask for this information.
+          ⚠️ Never share your OTP or banking credentials. Legitimate banks will never ask for this information.
+        </Text>
+        <Text style={[styles.tipsText, { color: colors.textSecondary }]}>
+          ⚠️ Be cautious of unsolicited messages or calls asking for personal information.
+        </Text>
+        <Text style={[styles.tipsText, { color: colors.textSecondary }]}>
+          ⚠️ Always verify the source before clicking on links or downloading attachments.
         </Text>
       </View>
     </ScrollView>
