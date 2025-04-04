@@ -68,13 +68,13 @@ export default function ReportsScreen() {
             <TouchableOpacity key={report.id} style={styles.reportItem}>
               <View style={styles.reportHeader}>
                 <View style={styles.reportType}>
-                  {report.type === 'call' ? (
+                  {report.type === 'Call' ? (
                     <Phone size={20} color="#6366F1" />
                   ) : (
                     <MessageSquare size={20} color="#6366F1" />
                   )}
                   <Text style={styles.reportCategory}>
-                    {report.type === 'call' ? 'Call Scam' : 'SMS Scam'}
+                    {report.type === 'Call' ? 'Call Scam' : 'SMS Scam'}
                   </Text>
                 </View>
                 <Text style={styles.reportTime}>
