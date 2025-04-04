@@ -1,40 +1,43 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { TriangleAlert as AlertTriangle, Phone, MessageSquare, TrendingUp } from 'lucide-react-native';
+import { useTheme } from './darktheme';
 
 export default function ReportsScreen() {
+  const { isDarkMode, colors } = useTheme();
+
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Scam Reports</Text>
-        <Text style={styles.subtitle}>Community-reported scams</Text>
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.surface }]}>
+        <Text style={[styles.title, { color: colors.text }]}>Scam Reports</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Community-reported scams</Text>
       </View>
 
       <View style={styles.statsContainer}>
-        <View style={styles.statCard}>
-          <TrendingUp size={24} color="#6366F1" />
-          <Text style={styles.statNumber}>2,547</Text>
-          <Text style={styles.statLabel}>Total Reports</Text>
+        <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
+          <TrendingUp size={24} color={colors.primary} />
+          <Text style={[styles.statNumber, { color: colors.text }]}>2,547</Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total Reports</Text>
         </View>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Latest Reports</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Latest Reports</Text>
         {[1, 2, 3, 4].map((item) => (
-          <TouchableOpacity key={item} style={styles.reportItem}>
+          <TouchableOpacity key={item} style={[styles.reportItem, { backgroundColor: colors.surface }]}>
             <View style={styles.reportHeader}>
               <View style={styles.reportType}>
                 {item % 2 === 0 ? (
-                  <Phone size={20} color="#6366F1" />
+                  <Phone size={20} color={colors.primary} />
                 ) : (
-                  <MessageSquare size={20} color="#6366F1" />
+                  <MessageSquare size={20} color={colors.primary} />
                 )}
-                <Text style={styles.reportCategory}>
+                <Text style={[styles.reportCategory, { color: colors.primary }]}>
                   {item % 2 === 0 ? 'Call Scam' : 'SMS Scam'}
                 </Text>
               </View>
-              <Text style={styles.reportTime}>2h ago</Text>
+              <Text style={[styles.reportTime, { color: colors.textSecondary }]}>2h ago</Text>
             </View>
-            <Text style={styles.reportDescription}>
+            <Text style={[styles.reportDescription, { color: colors.text }]}>
               {item % 2 === 0
                 ? 'Caller claiming to be from BDO Bank requesting OTP'
                 : 'SMS message about winning a prize and requesting personal information'}
@@ -44,13 +47,13 @@ export default function ReportsScreen() {
                 <AlertTriangle size={16} color="#DC2626" />
                 <Text style={styles.statusText}>High Risk</Text>
               </View>
-              <Text style={styles.reportNumber}>+63 912 XXX XXXX</Text>
+              <Text style={[styles.reportNumber, { color: colors.textSecondary }]}>+63 912 XXX XXXX</Text>
             </View>
           </TouchableOpacity>
         ))}
       </View>
 
-      <TouchableOpacity style={styles.reportButton}>
+      <TouchableOpacity style={[styles.reportButton, { backgroundColor: colors.primary }]}>
         <AlertTriangle size={24} color="#fff" />
         <Text style={styles.reportButtonText}>Report New Scam</Text>
       </TouchableOpacity>
