@@ -1,12 +1,14 @@
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Platform, Alert, Clipboard } from 'react-native';
+import Constants from 'expo-constants';
 import { MessageSquare, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import * as SMS from 'expo-sms';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { useTheme as useDarkTheme } from './darktheme';
 
-// Initialize Google Gemini
-const genAI = new GoogleGenerativeAI('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX');
+const GEMINI_API_KEY = Constants.expoConfig?.extra?.geminiApiKey || '';
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+// Initialize Google Geminis
 const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
 const useTheme = () => ({  isDarkMode: true,
   colors: {

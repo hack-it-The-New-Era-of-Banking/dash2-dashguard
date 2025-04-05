@@ -25,6 +25,10 @@
 },
     "experiments": {
       "typedRoutes": true
+    },
+
+    "extra": {
+      "geminiApiKey": "AIzaSyCxz87SJOkKqWSvwCDlw52Krlzvi0z_PDo"
     }
   }
 }
