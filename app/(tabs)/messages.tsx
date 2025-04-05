@@ -166,6 +166,19 @@ export default function MessagesScreen() {
     }
   };
 
+  const getRiskLabelStyle = (risk: string) => {
+    switch (risk) {
+      case 'high':
+        return { color: colors.error };
+      case 'suspicious':
+        return { color: colors.warning };
+      case 'safe':
+        return { color: colors.success };
+      default:
+        return {};
+    }
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.surface }]}>
@@ -198,6 +211,9 @@ export default function MessagesScreen() {
               </View>
               <Text style={[styles.preview, { color: colors.text }]} numberOfLines={2}>
                 {item.preview}
+              </Text>
+              <Text style={[styles.severityLabel, getRiskLabelStyle(item.risk)]}>
+                {item.risk.charAt(0).toUpperCase() + item.risk.slice(1)} Risk
               </Text>
             </View>
           </TouchableOpacity>
@@ -296,6 +312,12 @@ const styles = StyleSheet.create({
   preview: {
     fontSize: 14,
     lineHeight: 20,
+    marginBottom: 4,
+  },
+  severityLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 4,
   },
   emptyContainer: {
     flex: 1,
