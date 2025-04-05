@@ -1,225 +1,270 @@
-import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  ActivityIndicator,
-} from 'react-native';
-import {
-  MessageSquare,
-  TriangleAlert as AlertTriangle,
-  CircleCheck as CheckCircle,
-} from 'lucide-react-native';
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
-import dayjs from 'dayjs';
-import { useTheme } from './darktheme';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Platform, Alert } from 'react-native';
+import { MessageSquare, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
+import * as SMS from 'expo-sms';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// ----------------------------
-// Type Definitions
-// ----------------------------
+// Initialize Google Gemini
+const genAI = new GoogleGenerativeAI('AIzaSyCxz87SJOkKqWSvwCDlw52Krlzvi0z_PDo');
+const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+
 interface Message {
   id: string;
-  sender: string;
+  sender: string; 
   preview: string;
   timestamp: string;
-  risk: string;
+  risk: 'high' | 'suspicious' | 'safe';
 }
 
-// ----------------------------
-// Risk Analysis Logic
-// ----------------------------
-const RISK_THRESHOLDS = {
-  HIGH_RISK: 7,
-  SUSPICIOUS: 4,
-};
-
-const riskPatterns = {
-  highRisk: {
-    urgentAction: /(click here|reply (now|immediately)|act now|urgent|limited time)/i,
-    accountThreats: /(account.*(suspend|clos|block|terminat|deactivat))/i,
-    bankImpersonation: /(BDO|BPI|Security Bank|Metrobank|UnionBank)/i,
-    prizes: /(won|winner|prize|claim|reward|congratulation)/i,
-    personalInfo: /(verify.*identity|send.*(password|pin|otp|cvv))/i,
-    moneyRequests: /(send|transfer|payment|fee|charge)/i,
-    legalThreats: /(legal|lawsuit|police|arrest|criminal)/i,
-  },
-  suspicious: {
-    genericGreeting: /(dear.*customer|valued.*client)/i,
-    badGrammar: /(!+|\?+|[A-Z]{3,})/,
-    unverifiedOffers: /(offer|promo|discount|deal|save)/i,
-    verification: /(verify|confirm|validate|authenticate)/i,
-    links: /(http|www|\.com|\.ph|bit\.ly)/i,
-  },
-  safe: {
-    transaction: /(received|sent|transferred|paid|purchased)/i,
-    otpCode: /([0-9]{4,6}.*code|OTP|password)/i,
-    knownSender: /(GCash|PayMaya|Maya|Globe|Smart|PLDT)/i,
-  },
-};
-
-const analyzeMessageRisk = (message: string, sender: string): string => {
-  let riskScore = 0;
-
-  Object.values(riskPatterns.highRisk).forEach((pattern) => {
-    if (pattern.test(message) || pattern.test(sender)) riskScore += 3;
-  });
-
-  Object.values(riskPatterns.suspicious).forEach((pattern) => {
-    if (pattern.test(message) || pattern.test(sender)) riskScore += 2;
-  });
-
-  Object.values(riskPatterns.safe).forEach((pattern) => {
-    if (pattern.test(message) || pattern.test(sender)) riskScore -= 2;
-  });
-
-  if (/^\+(?!(63))/.test(sender)) riskScore += 3;
-  if (/^\+?[0-9]{11,}$/.test(sender)) riskScore += 2;
-
-  if (riskScore >= RISK_THRESHOLDS.HIGH_RISK) return 'high';
-  if (riskScore >= RISK_THRESHOLDS.SUSPICIOUS) return 'suspicious';
-  return 'safe';
-};
-
-// ----------------------------
-// Risk Helpers
-// ----------------------------
-const getRiskIcon = (risk: string) => {
-  switch (risk) {
-    case 'high':
-      return <AlertTriangle size={20} color="#DC2626" />;
-    case 'suspicious':
-      return <AlertTriangle size={20} color="#D97706" />;
-    case 'safe':
-      return <CheckCircle size={20} color="#059669" />;
-    default:
-      return null;
-  }
-};
-
-// ----------------------------
-// Main Component
-// ----------------------------
 export default function MessagesScreen() {
-  const { isDarkMode, colors } = useTheme();
   const [messages, setMessages] = useState<Message[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isAvailable, setIsAvailable] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
-    const q = query(collection(db, 'flaggedMessages'), orderBy('timestamp', 'desc'));
-
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const fetchedMessages: Message[] = snapshot.docs.map((doc) => {
-          const data = doc.data();
-          const msg = data.message || '';
-          const sender = data.phoneNumber || '';
-
-          return {
-            id: doc.id,
-            sender,
-            preview: msg,
-            timestamp: data.timestamp?.toDate ? dayjs(data.timestamp.toDate()).format('h:mm A') : 'N/A',
-            risk: data.risk || analyzeMessageRisk(msg, sender), // fallback to local risk analysis
-          };
-        });
-        setMessages(fetchedMessages);
-        setLoading(false);
-      },
-      (error) => {
-        console.error('Error fetching messages:', error);
-        setLoading(false);
+    // Check if SMS is available on the device
+    const checkSmsAvailability = async () => {
+      const isSmsAvailable = await SMS.isAvailableAsync();
+      setIsAvailable(isSmsAvailable);
+      
+      if (!isSmsAvailable) {
+        console.log('SMS is not available on this device');
       }
-    );
+    };
 
-    return () => unsubscribe();
+    checkSmsAvailability();
   }, []);
 
+  // Function to add delay between API calls
+  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+  // Function to generate mock message text using Gemini
+  const generateMockText = async (): Promise<string> => {
+    try {
+      await delay(8000); // Add 4 second delay
+      const prompt = `Generate a random SMS message that could be either a fraud or a legitimate message, make it balance. Make it Filipino way.`;
+      const result = await model.generateContent(prompt);
+      return result.response.text().trim();
+    } catch (error) {
+      console.error('Error generating mock text:', error);
+      return 'Your account has been locked. Click here to verify: bit.ly/suspicious-link';
+    }
+  };
+
+  // Function to analyze message using Gemini
+  const analyzeMessage = async (text: string): Promise<'high' | 'suspicious' | 'safe'> => {
+    try {
+      await delay(8000); // Add 4 second delay
+      const prompt = `Sentiment Analysis for detecting if text message is subjective to scamming, phishing or fraud. Rate it as either 'high', 'suspicious', or 'safe' risk:
+      "${text}"
+      Only respond with one word: high, suspicious, or safe.`;
+
+      const result = await model.generateContent(prompt);
+      const response = result.response.text().toLowerCase().trim();
+
+      if (response === 'high' || response === 'suspicious' || response === 'safe') {
+        return response as 'high' | 'suspicious' | 'safe';
+      }
+      return 'suspicious'; // Default to suspicious if response is unclear
+    } catch (error) {
+      console.error('Error analyzing message:', error);
+      return 'suspicious';
+    }
+  };
+
+  // Function to show risk alert
+  const showRiskAlert = (risk: 'high' | 'suspicious' | 'safe', message: string) => {
+    let title = '';
+    let description = '';
+
+    switch(risk) {
+      case 'high':
+        title = '⚠️ High Risk Message Detected';
+        description = 'This message appears to be dangerous and likely a scam. Do not click any links or provide personal information.';
+        break;
+      case 'suspicious':
+        title = '⚠️ Suspicious Message';
+        description = 'This message shows some suspicious patterns. Please be cautious and verify before taking any action.';
+        break;
+      case 'safe':
+        title = '✅ Safe Message';
+        description = 'This message appears to be safe.';
+        break;
+    }
+
+    Alert.alert(
+      title,
+      `${description}\n\nMessage content: ${message}`,
+      [{ text: 'OK', style: 'default' }]
+    );
+  };
+
+  // Function to handle scanning (in Expo, we'll need to manually add messages for demo)
+  const handleScanMessage = async () => {
+    if (!isAvailable || isProcessing) {
+      Alert.alert('Not Available', 'SMS functionality is not available on this device');
+      return;
+    }
+
+    setIsProcessing(true);
+    
+    const mockText = await generateMockText();
+    const riskLevel = await analyzeMessage(mockText);
+    
+    const mockMessage = {
+      id: Date.now().toString(),
+      sender: '+1234567890',
+      preview: mockText,
+      timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+      risk: riskLevel
+    };
+    
+    setMessages(prevMessages => [mockMessage, ...prevMessages]);
+    setTimeout(() => showRiskAlert(riskLevel, mockText), 500);
+    setIsProcessing(false);
+  };
+
+  const getRiskIcon = (risk: string) => {
+    switch (risk) {
+      case 'high':
+        return <AlertTriangle size={20} color="#DC2626" />;
+      case 'suspicious':
+        return <AlertTriangle size={20} color="#D97706" />;
+      case 'safe':
+        return <CheckCircle size={20} color="#059669" />;
+      default:
+        return null;
+    }
+  };
+
+  const getRiskStyle = (risk: string) => {
+    switch (risk) {
+      case 'high':
+        return styles.highRisk;
+      case 'suspicious':
+        return styles.suspicious;
+      case 'safe':
+        return styles.safe;
+      default:
+        return {};
+    }
+  };
+
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.surface }]}>
-        <Text style={[styles.title, { color: colors.text }]}>Messages</Text>
-        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Scanned messages appear here</Text>
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Messages</Text>
+        <Text style={styles.subtitle}>Scanned messages appear here</Text>
       </View>
 
-      {loading ? (
-        <ActivityIndicator size="large" color="#6366F1" style={{ marginTop: 32 }} />
-      ) : (
-        <FlatList
-          data={messages}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <TouchableOpacity style={[styles.messageItem, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-              <View style={styles.riskIndicator}>{getRiskIcon(item.risk)}</View>
-              <View style={styles.messageContent}>
-                <View style={styles.messageHeader}>
-                  <Text style={[styles.sender, { color: colors.text }]}>{item.sender}</Text>
-                  <Text style={[styles.timestamp, { color: colors.textSecondary }]}>{item.timestamp}</Text>
-                </View>
-                <Text style={[styles.preview, { color: colors.textSecondary }]} numberOfLines={2}>
-                  {item.preview}
-                </Text>
-                <Text style={[styles.riskLabel, getRiskLabelStyle(item.risk)]}>
-                  Risk: {item.risk.toUpperCase()}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          )}
-        />
+      {!isAvailable && (
+        <View style={styles.notSupportedBanner}>
+          <AlertTriangle size={18} color="#DC2626" />
+          <Text style={styles.notSupportedText}>SMS functionality is not available on this device</Text>
+        </View>
       )}
 
-      <TouchableOpacity style={styles.scanButton}>
+      <FlatList
+        data={messages}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <TouchableOpacity 
+            style={styles.messageItem}
+            onPress={() => showRiskAlert(item.risk, item.preview)}
+          >
+            <View style={[styles.riskIndicator, getRiskStyle(item.risk)]}>
+              {getRiskIcon(item.risk)}
+            </View>
+            <View style={styles.messageContent}>
+              <View style={styles.messageHeader}>
+                <Text style={styles.sender}>{item.sender}</Text>
+                <Text style={styles.timestamp}>{item.timestamp}</Text>
+              </View>
+              <Text style={styles.preview} numberOfLines={2}>
+                {item.preview}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        )}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No messages scanned yet</Text>
+          </View>
+        }
+      />
+
+      <TouchableOpacity 
+        style={[
+          styles.scanButton, 
+          (!isAvailable || isProcessing) && styles.disabledButton
+        ]} 
+        onPress={handleScanMessage}
+        disabled={!isAvailable || isProcessing}
+      >
         <MessageSquare size={24} color="#fff" />
-        <Text style={styles.scanButtonText}>Scan New Message</Text>
+        <Text style={styles.scanButtonText}>
+          {isProcessing ? 'Processing...' : 'Add Demo Message'}
+        </Text>
       </TouchableOpacity>
     </View>
   );
 }
 
-// ----------------------------
-// Styles
-// ----------------------------
-const getRiskLabelStyle = (risk: string) => {
-  switch (risk) {
-    case 'high':
-      return { color: '#DC2626' };
-    case 'suspicious':
-      return { color: '#D97706' };
-    case 'safe':
-      return { color: '#059669' };
-    default:
-      return {};
-  }
-};
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#F9FAFB',
   },
   header: {
     padding: 24,
     paddingTop: 60,
+    backgroundColor: '#fff',
   },
   title: {
     fontSize: 32,
     fontWeight: '700',
+    color: '#1F2937',
   },
   subtitle: {
     fontSize: 16,
+    color: '#6B7280',
     marginTop: 4,
+  },
+  notSupportedBanner: {
+    backgroundColor: '#FEE2E2',
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  notSupportedText: {
+    color: '#B91C1C',
+    marginLeft: 8,
+    fontSize: 14,
   },
   messageItem: {
     flexDirection: 'row',
+    backgroundColor: '#fff',
     padding: 16,
     borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
   },
   riskIndicator: {
-    marginRight: 12,
-    justifyContent: 'center',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  highRisk: {
+    backgroundColor: '#FEE2E2',
+  },
+  suspicious: {
+    backgroundColor: '#FEF3C7',
+  },
+  safe: {
+    backgroundColor: '#D1FAE5',
   },
   messageContent: {
     flex: 1,
@@ -227,22 +272,32 @@ const styles = StyleSheet.create({
   messageHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 4,
   },
   sender: {
     fontSize: 16,
     fontWeight: '600',
+    color: '#1F2937',
   },
   timestamp: {
     fontSize: 12,
+    color: '#6B7280',
   },
   preview: {
     fontSize: 14,
+    color: '#4B5563',
     lineHeight: 20,
   },
-  riskLabel: {
-    fontWeight: 'bold',
-    marginTop: 6,
+  emptyContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 60,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#6B7280',
   },
   scanButton: {
     position: 'absolute',
@@ -254,10 +309,17 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 30,
     shadowColor: '#6366F1',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
     shadowOpacity: 0.3,
     shadowRadius: 4.65,
     elevation: 8,
+  },
+  disabledButton: {
+    backgroundColor: '#9CA3AF',
+    shadowColor: '#9CA3AF',
   },
   scanButtonText: {
     color: '#fff',
