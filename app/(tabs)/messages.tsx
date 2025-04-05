@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Platform, Alert, Clipboard } from 'react-native';
 import { MessageSquare, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import * as SMS from 'expo-sms';
@@ -6,7 +6,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { useTheme as useDarkTheme } from './darktheme';
 
 // Initialize Google Gemini
-const genAI = new GoogleGenerativeAI('AIzaSyCxz87SJOkKqWSvwCDlw52Krlzvi0z_PDo');
+const genAI = new GoogleGenerativeAI('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX');
 const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
 const useTheme = () => ({  isDarkMode: true,
   colors: {
@@ -50,6 +50,12 @@ export default function MessagesScreen() {
 
     checkSmsAvailability();
   }, []);
+
+  // Function to handle long press and copy number
+  const handleLongPress = (sender: string) => {
+    Clipboard.setString(sender);
+    Alert.alert('Copied', `Phone number ${sender} copied to clipboard`);
+  };
 
   // Function to add delay between API calls
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -200,6 +206,7 @@ export default function MessagesScreen() {
           <TouchableOpacity 
             style={[styles.messageItem, { backgroundColor: colors.surface }]}
             onPress={() => showRiskAlert(item.risk, item.preview)}
+            onLongPress={() => handleLongPress(item.sender)}
           >
             <View style={[styles.riskIndicator, getRiskStyle(item.risk)]}>
               {getRiskIcon(item.risk)}

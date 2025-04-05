@@ -1,9 +1,10 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { TriangleAlert as AlertTriangle, Phone, MessageSquare, TrendingUp } from 'lucide-react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal, TextInput, Platform } from 'react-native';
+import { TriangleAlert as AlertTriangle, Phone, MessageSquare, TrendingUp, X } from 'lucide-react-native';
 import { useTheme } from './darktheme';
-import { useEffect, useState } from 'react';
-import { collection, getDocs, query, orderBy, Timestamp } from 'firebase/firestore';
+import React, { useEffect, useState } from 'react';
+import { collection, getDocs, query, orderBy, Timestamp, addDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
+import RNPickerSelect from 'react-native-picker-select';
 
 // Type definition for report
 type Report = {
@@ -19,6 +20,13 @@ export default function ReportsScreen() {
   const { isDarkMode, colors } = useTheme();
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [newReport, setNewReport] = useState({
+    phoneNumber: '',
+    description: '',
+    type: 'SMS',
+    severity: 'Medium'
+  });
 
   useEffect(() => {
     const fetchReports = async () => {
@@ -43,6 +51,43 @@ export default function ReportsScreen() {
 
     fetchReports();
   }, []);
+
+  const handleReportSubmit = async () => {
+    if (!newReport.phoneNumber || !newReport.description) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      const reportData = {
+        phoneNumber: newReport.phoneNumber,
+        description: newReport.description,
+        type: newReport.type,
+        severity: newReport.severity,
+        reportedAt: Timestamp.now()
+      };
+
+      const docRef = await addDoc(collection(db, 'reportedNumbers'), reportData);
+      
+      // Update local state to include the new report
+      setReports([{
+        id: docRef.id,
+        ...reportData
+      }, ...reports]);
+
+      // Reset form and close modal
+      setNewReport({
+        phoneNumber: '',
+        description: '',
+        type: 'SMS',
+        severity: 'Medium'
+      });
+      setModalVisible(false);
+    } catch (error) {
+      console.error('Error adding report:', error);
+      alert('Failed to submit report. Please try again.');
+    }
+  };
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -101,10 +146,130 @@ export default function ReportsScreen() {
         )}
       </View>
 
-      <TouchableOpacity style={[styles.reportButton, { backgroundColor: colors.primary }]}>
+      <TouchableOpacity 
+        style={[styles.reportButton, { backgroundColor: colors.primary }]}
+        onPress={() => setModalVisible(true)}
+      >
         <AlertTriangle size={24} color="#fff" />
         <Text style={styles.reportButtonText}>Report New Scam</Text>
       </TouchableOpacity>
+
+      {/* Report Modal */}
+      <Modal
+        animationType="slide"
+        transparent={false}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <ScrollView style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+          <View style={styles.modalHeader}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Report New Scam</Text>
+            <TouchableOpacity onPress={() => setModalVisible(false)}>
+              <X size={24} color={colors.text} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={[styles.label, { color: colors.text }]}>Phone Number *</Text>
+            <TextInput
+              style={[styles.input, { 
+                backgroundColor: colors.surface, 
+                color: colors.text,
+                borderColor: colors.border,
+                borderWidth: 1
+              }]}
+              placeholder="Enter phone number"
+              placeholderTextColor={colors.textSecondary}
+              value={newReport.phoneNumber}
+              onChangeText={(text) => setNewReport({...newReport, phoneNumber: text})}
+              keyboardType="phone-pad"
+            />
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={[styles.label, { color: colors.text }]}>Type *</Text>
+            <View style={[styles.pickerContainer, { 
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
+              borderWidth: 1
+            }]}>
+              <RNPickerSelect
+                onValueChange={(value: any) => setNewReport({...newReport, type: value})}
+                items={[
+                  { label: 'SMS', value: 'SMS' },
+                  { label: 'Call', value: 'Call' },
+                ]}
+                value={newReport.type}
+                style={{
+                  inputIOS: {
+                    color: colors.text,
+                    padding: 12,
+                  },
+                  inputAndroid: {
+                    color: colors.text,
+                    padding: 12,
+                  },
+                }}
+              />
+            </View>
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={[styles.label, { color: colors.text }]}>Severity</Text>
+            <View style={[styles.pickerContainer, { 
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
+              borderWidth: 1
+            }]}>
+              <RNPickerSelect
+                onValueChange={(value) => setNewReport({...newReport, severity: value})}
+                items={[
+                  { label: 'Low', value: 'Low' },
+                  { label: 'Medium', value: 'Medium' },
+                  { label: 'High', value: 'High' },
+                  { label: 'Critical', value: 'Critical' },
+                ]}
+                value={newReport.severity}
+                style={{
+                  inputIOS: {
+                    color: colors.text,
+                    padding: 12,
+                  },
+                  inputAndroid: {
+                    color: colors.text,
+                    padding: 12,
+                  },
+                }}
+              />
+            </View>
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={[styles.label, { color: colors.text }]}>Description *</Text>
+            <TextInput
+              style={[styles.textarea, { 
+                backgroundColor: colors.surface, 
+                color: colors.text,
+                borderColor: colors.border,
+                borderWidth: 1
+              }]}
+              placeholder="Describe the scam message/call"
+              placeholderTextColor={colors.textSecondary}
+              value={newReport.description}
+              onChangeText={(text) => setNewReport({...newReport, description: text})}
+              multiline
+              numberOfLines={4}
+            />
+          </View>
+
+          <TouchableOpacity 
+            style={[styles.submitButton, { backgroundColor: colors.primary }]}
+            onPress={handleReportSubmit}
+          >
+            <Text style={styles.submitButtonText}>Submit Report</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </Modal>
     </ScrollView>
   );
 }
@@ -218,5 +383,55 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
+  },
+  modalContainer: {
+    flex: 1,
+    padding: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+  },
+  formGroup: {
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 16,
+    marginBottom: 8,
+  },
+  input: {
+    height: 50,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    fontSize: 16,
+  },
+  textarea: {
+    height: 120,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 16,
+    textAlignVertical: 'top',
+  },
+  pickerContainer: {
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  submitButton: {
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  submitButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
