@@ -3,20 +3,36 @@ import { MessageSquare, TriangleAlert as AlertTriangle, CircleCheck as CheckCirc
 import { useEffect, useState } from 'react';
 import * as SMS from 'expo-sms';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { useTheme as useDarkTheme } from './darktheme';
 
 // Initialize Google Gemini
 const genAI = new GoogleGenerativeAI('AIzaSyCxz87SJOkKqWSvwCDlw52Krlzvi0z_PDo');
 const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
-
+const useTheme = () => ({  isDarkMode: true,
+  colors: {
+    background: '#000000',
+    surface: '#121212',
+    primary: '#BB86FC',
+    primaryLight: '#E3DAF8',
+    text: '#FFFFFF',
+    textSecondary: '#B3B3B3',
+    border: '#292929',
+    iconBackground: '#1F1F1F',
+    error: '#FF5252', // Added error color
+    warning: '#FFC107', // Added warning color
+    success: '#4CAF50', // Added success color
+  },
+});
 interface Message {
   id: string;
-  sender: string; 
+  sender: string;
   preview: string;
   timestamp: string;
   risk: 'high' | 'suspicious' | 'safe';
 }
 
 export default function MessagesScreen() {
+  const { isDarkMode, colors } = useTheme();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isAvailable, setIsAvailable] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -41,7 +57,7 @@ export default function MessagesScreen() {
   // Function to generate mock message text using Gemini
   const generateMockText = async (): Promise<string> => {
     try {
-      await delay(8000); // Add 4 second delay
+      await delay(8000);
       const prompt = `Generate a random SMS message that could be either a fraud or a legitimate message, make it balance. Make it Filipino way.`;
       const result = await model.generateContent(prompt);
       return result.response.text().trim();
@@ -54,7 +70,7 @@ export default function MessagesScreen() {
   // Function to analyze message using Gemini
   const analyzeMessage = async (text: string): Promise<'high' | 'suspicious' | 'safe'> => {
     try {
-      await delay(8000); // Add 4 second delay
+      await delay(8000);
       const prompt = `Sentiment Analysis for detecting if text message is subjective to scamming, phishing or fraud. Rate it as either 'high', 'suspicious', or 'safe' risk:
       "${text}"
       Only respond with one word: high, suspicious, or safe.`;
@@ -65,7 +81,7 @@ export default function MessagesScreen() {
       if (response === 'high' || response === 'suspicious' || response === 'safe') {
         return response as 'high' | 'suspicious' | 'safe';
       }
-      return 'suspicious'; // Default to suspicious if response is unclear
+      return 'suspicious';
     } catch (error) {
       console.error('Error analyzing message:', error);
       return 'suspicious';
@@ -127,11 +143,11 @@ export default function MessagesScreen() {
   const getRiskIcon = (risk: string) => {
     switch (risk) {
       case 'high':
-        return <AlertTriangle size={20} color="#DC2626" />;
+        return <AlertTriangle size={20} color={colors.error} />;
       case 'suspicious':
-        return <AlertTriangle size={20} color="#D97706" />;
+        return <AlertTriangle size={20} color={colors.warning} />;
       case 'safe':
-        return <CheckCircle size={20} color="#059669" />;
+        return <CheckCircle size={20} color={colors.success} />;
       default:
         return null;
     }
@@ -151,16 +167,16 @@ export default function MessagesScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Messages</Text>
-        <Text style={styles.subtitle}>Scanned messages appear here</Text>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.surface }]}>
+        <Text style={[styles.title, { color: colors.text }]}>Messages</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Scanned messages appear here</Text>
       </View>
 
       {!isAvailable && (
         <View style={styles.notSupportedBanner}>
-          <AlertTriangle size={18} color="#DC2626" />
-          <Text style={styles.notSupportedText}>SMS functionality is not available on this device</Text>
+          <AlertTriangle size={18} color={colors.error} />
+          <Text style={[styles.notSupportedText, { color: colors.error }]}>SMS functionality is not available on this device</Text>
         </View>
       )}
 
@@ -169,7 +185,7 @@ export default function MessagesScreen() {
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <TouchableOpacity 
-            style={styles.messageItem}
+            style={[styles.messageItem, { backgroundColor: colors.surface }]}
             onPress={() => showRiskAlert(item.risk, item.preview)}
           >
             <View style={[styles.riskIndicator, getRiskStyle(item.risk)]}>
@@ -177,10 +193,10 @@ export default function MessagesScreen() {
             </View>
             <View style={styles.messageContent}>
               <View style={styles.messageHeader}>
-                <Text style={styles.sender}>{item.sender}</Text>
-                <Text style={styles.timestamp}>{item.timestamp}</Text>
+                <Text style={[styles.sender, { color: colors.text }]}>{item.sender}</Text>
+                <Text style={[styles.timestamp, { color: colors.textSecondary }]}>{item.timestamp}</Text>
               </View>
-              <Text style={styles.preview} numberOfLines={2}>
+              <Text style={[styles.preview, { color: colors.text }]} numberOfLines={2}>
                 {item.preview}
               </Text>
             </View>
@@ -188,14 +204,15 @@ export default function MessagesScreen() {
         )}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No messages scanned yet</Text>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No messages scanned yet</Text>
           </View>
         }
       />
 
       <TouchableOpacity 
         style={[
-          styles.scanButton, 
+          styles.scanButton,
+          { backgroundColor: colors.primary },
           (!isAvailable || isProcessing) && styles.disabledButton
         ]} 
         onPress={handleScanMessage}
@@ -203,7 +220,7 @@ export default function MessagesScreen() {
       >
         <MessageSquare size={24} color="#fff" />
         <Text style={styles.scanButtonText}>
-          {isProcessing ? 'Processing...' : 'Add Demo Message'}
+          {isProcessing ? 'Processing...' : 'Scan Inbox'}
         </Text>
       </TouchableOpacity>
     </View>
@@ -213,21 +230,17 @@ export default function MessagesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
   },
   header: {
     padding: 24,
     paddingTop: 60,
-    backgroundColor: '#fff',
   },
   title: {
     fontSize: 32,
     fontWeight: '700',
-    color: '#1F2937',
   },
   subtitle: {
     fontSize: 16,
-    color: '#6B7280',
     marginTop: 4,
   },
   notSupportedBanner: {
@@ -238,13 +251,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   notSupportedText: {
-    color: '#B91C1C',
     marginLeft: 8,
     fontSize: 14,
   },
   messageItem: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
@@ -278,15 +289,12 @@ const styles = StyleSheet.create({
   sender: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1F2937',
   },
   timestamp: {
     fontSize: 12,
-    color: '#6B7280',
   },
   preview: {
     fontSize: 14,
-    color: '#4B5563',
     lineHeight: 20,
   },
   emptyContainer: {
@@ -297,18 +305,15 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#6B7280',
   },
   scanButton: {
     position: 'absolute',
     bottom: 24,
     right: 24,
-    backgroundColor: '#6366F1',
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     borderRadius: 30,
-    shadowColor: '#6366F1',
     shadowOffset: {
       width: 0,
       height: 4,
