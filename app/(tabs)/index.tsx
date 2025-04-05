@@ -112,14 +112,14 @@ export default function ProtectScreen() {
         <View style={styles.gridItem}>
           <View style={[styles.statBox, { backgroundColor: isDarkMode ? '#3F3F46' : '#FEF3C7' }]}>
             <AlertTriangle size={24} color="#D97706" />
-            <Text style={[styles.statNumber, { color: isDarkMode ? '#FBBF24' : '#D97706' }]}>12</Text>
+            <Text style={[styles.statNumber, { color: isDarkMode ? '#FBBF24' : '#D97706' }]}>6</Text>
             <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Threats Blocked</Text>
           </View>
         </View>
         <View style={styles.gridItem}>
           <View style={[styles.statBox, { backgroundColor: isDarkMode ? '#3F3F46' : '#E0E7FF' }]}>
             <MessageSquare size={24} color="#4F46E5" />
-            <Text style={[styles.statNumber, { color: isDarkMode ? '#818CF8' : '#4F46E5' }]}>48</Text>
+            <Text style={[styles.statNumber, { color: isDarkMode ? '#818CF8' : '#4F46E5' }]}>1</Text>
             <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Messages Scanned</Text>
           </View>
         </View>
