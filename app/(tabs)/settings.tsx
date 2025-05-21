@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, ScrollView, Switch, TouchableOpacity } from 'react-native';
 import { Bell, Shield, Database, MessageSquare, Phone, CircleHelp as HelpCircle, Sun, Moon } from 'lucide-react-native';
 import { useState } from 'react';
-import { useTheme } from './darktheme'; // Update with correct path
+import { useTheme } from '../dark'; // Update with correct path
 
 export default function SettingsScreen() {
   const { isDarkMode, toggleDarkMode, colors } = useTheme();

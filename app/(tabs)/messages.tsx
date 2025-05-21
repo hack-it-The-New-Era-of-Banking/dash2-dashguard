@@ -4,12 +4,12 @@ import { MessageSquare, TriangleAlert as AlertTriangle, CircleCheck as CheckCirc
 import { useEffect, useState } from 'react';
 import * as SMS from 'expo-sms';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { useTheme as useDarkTheme } from './darktheme';
+import { useTheme as useDarkTheme } from '../dark';
 
 const GEMINI_API_KEY = Constants.expoConfig?.extra?.geminiApiKey || '';
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 // Initialize Google Geminis
-const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 const useTheme = () => ({  isDarkMode: true,
   colors: {
     background: '#000000',
@@ -66,7 +66,7 @@ export default function MessagesScreen() {
   const generateMockText = async (): Promise<string> => {
     try {
       await delay(8000);
-      const prompt = `Generate a random SMS message that could be either a fraud or a legitimate message, make it balance. Make it Filipino way.`;
+      const prompt = `Generate a random SMS message that could be either a fraud or a legitimate message, make it balance. Make it Filipino way. Just the text message, no other text.`;
       const result = await model.generateContent(prompt);
       return result.response.text().trim();
     } catch (error) {
@@ -137,7 +137,7 @@ export default function MessagesScreen() {
     
     const mockMessage = {
       id: Date.now().toString(),
-      sender: '+1234567890',
+      sender: `+63${Math.floor(Math.random() * 10000000).toString().padStart(9, '9')}`,
       preview: mockText,
       timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
       risk: riskLevel

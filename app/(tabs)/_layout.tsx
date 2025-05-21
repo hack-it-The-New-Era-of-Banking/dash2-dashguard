@@ -6,7 +6,7 @@ import {
   Settings,
   LogIn,
 } from 'lucide-react-native';
-import { ThemeProvider, useTheme } from './darktheme'; // Update with correct path
+import { ThemeProvider, useTheme } from '../dark'; // Update with correct path
 
 // TabNavigator component that uses the theme context 
 function TabNavigator() {
@@ -77,7 +77,7 @@ function TabNavigator() {
 // Main layout component that wraps the tab navigator with the theme provider
 export default function TabLayout() {
   return (
-    <ThemeProvider>
+    <ThemeProvider children={undefined}>
       <TabNavigator />
     </ThemeProvider>
   );

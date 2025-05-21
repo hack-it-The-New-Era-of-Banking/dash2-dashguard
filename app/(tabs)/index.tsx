@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { Shield as ShieldIcon, TriangleAlert as AlertTriangle, MessageSquare } from 'lucide-react-native';
-import { useTheme } from './darktheme'; // Update with correct path
+import { useTheme } from '../dark'; // Update with correct path
 import Animated, {
   useSharedValue,
   useAnimatedStyle,

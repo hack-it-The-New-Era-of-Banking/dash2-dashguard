@@ -76,3 +76,8 @@ export function useTheme() {
   }
   return context;
 }
+
+// Default export for the theme module
+export default function DarkTheme() {
+  return null;
+}

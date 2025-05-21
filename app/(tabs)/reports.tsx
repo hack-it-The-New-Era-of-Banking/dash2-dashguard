@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal, TextInput, Platform } from 'react-native';
 import { TriangleAlert as AlertTriangle, Phone, MessageSquare, TrendingUp, X } from 'lucide-react-native';
-import { useTheme } from './darktheme';
+import { useTheme } from '../dark';
 import React, { useEffect, useState } from 'react';
 import { collection, getDocs, query, orderBy, Timestamp, addDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
